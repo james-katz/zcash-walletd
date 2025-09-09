@@ -31,6 +31,7 @@ use zcash_protocol::{
 };
 
 use crate::{
+    info,
     lwd_rpc::{
         compact_tx_streamer_client::CompactTxStreamerClient, BlockId, BlockRange, ChainSpec,
         CompactOrchardAction, CompactSaplingOutput, TxFilter,

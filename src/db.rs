@@ -1,14 +1,16 @@
 use crate::account::{Account, AccountBalance, SubAccount};
 use crate::lwd_rpc::BlockId;
 use crate::network::Network;
+use crate::notifier::TxNotifier;
 use crate::scan::ScanEvent;
 use crate::transaction::{SubAddress, Transfer};
-use crate::{notify_tx, Client, Hash};
+use crate::{Client, Hash};
 use anyhow::Result;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteRow};
 use sqlx::{Acquire, Row, SqliteConnection, SqlitePool};
 use tonic::Request;
 use std::collections::HashMap;
+use std::sync::Arc;
 use zcash_keys::address::UnifiedAddress;
 use zcash_keys::encoding::AddressCodec;
 use zcash_keys::keys::{UnifiedAddressRequest, UnifiedFullViewingKey};
@@ -18,7 +20,7 @@ pub struct Db {
     network: Network,
     pool: SqlitePool,
     ufvk: UnifiedFullViewingKey,
-    notify_tx_url: String,
+    notifier: Option<Arc<dyn TxNotifier>>,
 }
 
 impl Db {
@@ -26,7 +28,7 @@ impl Db {
         network: Network,
         db_path: &str,
         ufvk: &UnifiedFullViewingKey,
-        notify_tx_url: &str,
+        notifier: Option<Arc<dyn TxNotifier>>,
     ) -> Result<Self> {
         let options = SqliteConnectOptions::new()
             .filename(db_path)
@@ -36,7 +38,7 @@ impl Db {
             network,
             pool,
             ufvk: ufvk.clone(),
-            notify_tx_url: notify_tx_url.to_string(),
+            notifier,
         })
     }
 
@@ -627,7 +629,10 @@ impl Db {
                         .await?;
                 let id_tx = r.last_insert_rowid();
 
-                notify_tx(txid, &self.notify_tx_url).await?;
+                // notify_tx(txid, &self.notify_tx_url).await?;
+                if let Some(notifier) = &self.notifier {
+                    notifier.notify_tx(txid).await?;
+                }
 
                 id_tx as u32
             }
