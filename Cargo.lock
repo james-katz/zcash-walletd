@@ -4754,6 +4754,7 @@ name = "zcash-walletd"
 version = "1.1.3"
 dependencies = [
  "anyhow",
+ "async-trait",
  "bls12_381 0.4.0",
  "clap",
  "dotenv",
