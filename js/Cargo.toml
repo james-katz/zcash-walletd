@@ -1,0 +1,17 @@
+[package]
+name = "zcash-walletd-js"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zcash-walletd = { path = ".." }
+node-bindgen = { version = "6.0" }
+lazy_static = "1.4.0"
+tokio = { version = "^1.6", features = ["macros", "rt-multi-thread"] }
+json = "0.12.4"
+
+[build-dependencies]
+node-bindgen = { version = "6.0", default-features = false, features = ["build"] }
