@@ -173,6 +173,26 @@ impl Db {
         Ok(sub_accounts)
     }
 
+    pub async fn get_addresses(&self) -> Result<Vec<SubAccount>> {
+    let mut connection = self.pool.acquire().await?;
+        let addresses = sqlx::query(
+            "SELECT account, sub_account, address  FROM addresses")
+            .map(|row: SqliteRow| {
+                let account_index = row.get(0);
+                let sub_account_index = row.get(1);
+                let address = row.get(2);
+                SubAccount {
+                    account_index,
+                    sub_account_index,
+                    address,
+                }
+            })
+            .fetch_all(&mut *connection)
+            .await?;
+
+        Ok(addresses)
+    }
+
     pub async fn get_synced_height(&self) -> Result<u32> {
         let mut connection = self.pool.acquire().await?;
         let height = sqlx::query("SELECT MAX(height) FROM blocks")

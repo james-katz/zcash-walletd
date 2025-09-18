@@ -91,6 +91,23 @@ fn get_accounts() -> Result<String, String> {
 }
 
 #[node_bindgen]
+fn get_addresses() -> Result<String, String> {
+    run_blocking(|wallet| async move {
+        let rep = wallet.get_addresses().await.map_err(|e| e.to_string())?;
+
+        let addresses: Vec<json::JsonValue> = rep.addresses.into_iter().map(|a| {
+            json::object! {
+                account_index: a.account_index,
+                sub_address_index: a.sub_account_index,
+                address: a.address
+            }
+        }).collect();
+
+        Ok(json::JsonValue::from(addresses).pretty(2))
+    })
+}
+
+#[node_bindgen]
 fn get_transaction(txid: String, account_index: u32) -> Result<String, String> {
     run_blocking(|wallet| async move {
         let rep = wallet.get_transaction(txid, account_index).await.map_err(|e| e.to_string())?;
@@ -180,7 +197,7 @@ async fn request_scan_async() -> Result<String, String> {
             .as_ref()
             .cloned()
             .ok_or_else(|| "Error: ZcashWalletd is not initialized".to_string())?
-    };  
+    };
 
     RT.spawn(async move {
         let _ = wallet.request_scan().await;
