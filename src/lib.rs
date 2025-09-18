@@ -8,7 +8,7 @@ mod network;
 mod notifier;
 pub mod rpc;
 mod scan;
-mod transaction;
+pub mod transaction;
 
 use std::{path::Path, sync::Arc};
 use anyhow::{anyhow, Result};
@@ -24,7 +24,7 @@ use tracing_subscriber::{
     util::SubscriberInitExt as _,
     EnvFilter, Layer, Registry,
 };
-use crate::{account::AccountBalance, db::Db, lwd_rpc::{compact_tx_streamer_client::CompactTxStreamerClient, Empty}, monitor::MonitorTask, network::Network, notifier::{HttpNotifier, TxNotifier}, scan::{get_latest_height, Decoder, Orchard, Sapling, ScanError}, transaction::Transfer};
+use crate::{account::{AccountBalance, SubAccount}, db::Db, lwd_rpc::{compact_tx_streamer_client::CompactTxStreamerClient, Empty}, monitor::MonitorTask, network::Network, notifier::{HttpNotifier, TxNotifier}, scan::{get_latest_height, Decoder, Orchard, Sapling, ScanError}, transaction::Transfer};
 use zcash_client_backend::keys::UnifiedFullViewingKey;
 
 pub type Hash = [u8; 32];
@@ -168,6 +168,16 @@ impl ZcashWalletd {
         )    
     }
 
+    pub async fn get_addresses(&self) -> anyhow::Result<GetAddressesResponse> {
+        let addresses = self.db.get_addresses().await?;
+
+        Ok(
+            GetAddressesResponse {
+                addresses
+            }
+        )
+    }
+
     pub async fn get_transaction(
         &self,
         txid: String,
@@ -229,6 +239,15 @@ impl ZcashWalletd {
         )
     }
 
+    pub async fn get_wallet_height(&self) -> anyhow::Result<GetHeightResponse> {
+        let synced_height = self.db.get_synced_height().await?;
+        Ok(
+            GetHeightResponse {
+                height: synced_height,
+            }
+        )
+    }
+
     pub async fn sync_info(&self) -> anyhow::Result<SyncInfoResponse> {
         let mut client = CompactTxStreamerClient::connect(self.config.lwd_url.clone())
             .await
@@ -275,7 +294,7 @@ impl ZcashWalletd {
             .map_err(anyhow::Error::new)?;
         let end = get_latest_height(&mut client).await?;
 
-        info!("Scan from {start} to {end}");
+        println!("Scan from {start} to {end}");
         if start >= end {
             return Ok(());
         }
@@ -314,21 +333,26 @@ impl ZcashWalletd {
 
 #[derive(Serialize, Deserialize)]
 pub struct CreateAccountResponse {
-    account_index: u32,
-    address: String,
+    pub account_index: u32,
+    pub address: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct CreateAddressResponse {
-    address: String,
-    address_index: u32,
+    pub address: String,
+    pub address_index: u32,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct GetAccountsResponse {
-    subaddress_accounts: Vec<AccountBalance>,
-    total_balance: u64,
-    total_unlocked_balance: u64,
+    pub subaddress_accounts: Vec<AccountBalance>,
+    pub total_balance: u64,
+    pub total_unlocked_balance: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GetAddressesResponse {
+    pub addresses: Vec<SubAccount>,    
 }
 
 #[derive(Serialize, Deserialize, Debug)]
