@@ -5,7 +5,6 @@ pub struct Account {
     pub address: String,
 }
 
-#[allow(dead_code)]
 #[derive(Serialize, Deserialize)]
 pub struct SubAccount {
     pub account_index: u32,

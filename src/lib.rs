@@ -207,9 +207,11 @@ impl ZcashWalletd {
     pub async fn get_transfers(
         &self,
         account_index: u32,
-        // r#in: bool,
+        r#in: bool,
         subaddr_indices: Vec<u32>
     ) -> anyhow::Result<GetTransfersResponse> {
+        assert!(r#in);
+        
         let mut client = CompactTxStreamerClient::connect(self.config.lwd_url.clone())
             .await
             .map_err(from_tonic)?;
@@ -277,13 +279,13 @@ impl ZcashWalletd {
         let nfs = self.db.get_nfs().await?;
         let mut sap_dec = ufvk.sapling().map(|fvk| {
             let nk = fvk.fvk().vk.nk;
-            let ivk = fvk.to_ivk(zcash_primitives::zip32::Scope::External);
+            let ivk = fvk.to_ivk(zip32::Scope::External);
             let pivk = sapling_crypto::keys::PreparedIncomingViewingKey::new(&ivk);
             // TODO: Load nfs
             Decoder::<Sapling>::new(nk, fvk.clone(), pivk, &nfs)
         });
         let mut orc_dec = ufvk.orchard().map(|fvk| {
-            let ivk = fvk.to_ivk(zcash_primitives::zip32::Scope::External);
+            let ivk = fvk.to_ivk(zip32::Scope::External);
             let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ivk);
             // TODO: Load nfs
             Decoder::<Orchard>::new(fvk.clone(), ivk, pivk, &nfs)
@@ -293,13 +295,13 @@ impl ZcashWalletd {
             .await
             .map_err(anyhow::Error::new)?;
         let end = get_latest_height(&mut client).await?;
-
-        println!("Scan from {start} to {end}");
+        
+        info!("Scan from {start} to {end}");
         if start >= end {
             return Ok(());
         }
 
-        let res = scan::scan(
+        let res = crate::scan::scan(
             &network,
             &mut client,
             start + 1,
@@ -316,7 +318,7 @@ impl ZcashWalletd {
                 match error {
                     ScanError::Reorganization => {
                         let synced_height = self.db.get_synced_height().await?;
-                        self.db.truncate_height(synced_height - self.config.confirmations)
+                        self.db.truncate_height(synced_height - SAFE_REORG_DISTANCE)
                             .await
                     }
                     ScanError::Other(error) => Err(error),
@@ -330,6 +332,8 @@ impl ZcashWalletd {
         Ok(())
     }
 }
+
+pub const SAFE_REORG_DISTANCE: u32 = 100u32;
 
 #[derive(Serialize, Deserialize)]
 pub struct CreateAccountResponse {

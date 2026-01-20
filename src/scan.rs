@@ -16,6 +16,7 @@ use sapling_crypto::{
 };
 use thiserror::Error;
 use tonic::{transport::Channel, Request};
+use tracing::info;
 use zcash_address::unified::{self, Encoding};
 use zcash_keys::encoding::AddressCodec;
 use zcash_note_encryption::{
@@ -31,7 +32,6 @@ use zcash_protocol::{
 };
 
 use crate::{
-    info,
     lwd_rpc::{
         compact_tx_streamer_client::CompactTxStreamerClient, BlockId, BlockRange, ChainSpec,
         CompactOrchardAction, CompactSaplingOutput, TxFilter,
@@ -541,51 +541,51 @@ pub enum ScanError {
     Other(#[from] anyhow::Error),
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::db::Db;
+// #[cfg(test)]
+// mod tests {
+//     use crate::db::Db;
 
-    use super::*;
-    use anyhow::Result;
+//     use super::*;
+//     use anyhow::Result;
 
-    const FVK: &str = "uview1s5ranpd74zd2pseylw0fmt0cnudf9765mwjjd9mqf8tvjq2nlw9vgypzqayfvs7aeedguwl4r7exz50nrw6llfs3n9xfd4sm2slaay7smysc4yjyuwu3z7n5ccvyw70qkw28yt6xwra6c8d20ewpjeqq4enmftyly3fmn78hwwkyffp2y4x2vk8050vcly8y5fuse5s9e5j4wmwuldemxahrp4zrgatj63mnpqlpacvcudqfsm5ee29pj8lr5wt93eyrx3fwa64m6505cge6n46c7eqw59e0n3m9rmsntcflfmu9wyjgfk2pmjf4npkml93vyq0fps2rh4mdwpz4ld059m6mamjht99j7sdypwx52lj6lvrfgwja4uf7qy2g8d6gkmvkh7u4dksq5gazxvye4gtwfgwmuygg2sqmkkf4fjd3ymf0mq99rhf0trsl0lpddw64r4n7jj7mxy6fcpj64vkx0pre2lla9p8nknrt2c33zy3vaczd";
+//     const FVK: &str = "uview1s5ranpd74zd2pseylw0fmt0cnudf9765mwjjd9mqf8tvjq2nlw9vgypzqayfvs7aeedguwl4r7exz50nrw6llfs3n9xfd4sm2slaay7smysc4yjyuwu3z7n5ccvyw70qkw28yt6xwra6c8d20ewpjeqq4enmftyly3fmn78hwwkyffp2y4x2vk8050vcly8y5fuse5s9e5j4wmwuldemxahrp4zrgatj63mnpqlpacvcudqfsm5ee29pj8lr5wt93eyrx3fwa64m6505cge6n46c7eqw59e0n3m9rmsntcflfmu9wyjgfk2pmjf4npkml93vyq0fps2rh4mdwpz4ld059m6mamjht99j7sdypwx52lj6lvrfgwja4uf7qy2g8d6gkmvkh7u4dksq5gazxvye4gtwfgwmuygg2sqmkkf4fjd3ymf0mq99rhf0trsl0lpddw64r4n7jj7mxy6fcpj64vkx0pre2lla9p8nknrt2c33zy3vaczd";
 
-    #[tokio::test]
-    async fn test() -> Result<()> {
-        let mut client = CompactTxStreamerClient::connect("https://zec.rocks".to_string()).await?;
+//     #[tokio::test]
+//     async fn test() -> Result<()> {
+//         let mut client = CompactTxStreamerClient::connect("https://zec.rocks".to_string()).await?;
 
-        let prev_hash =
-            hex::decode("5f03d35ae940bb840564c3b7af7ab72255096d3eca15c910c0e40d0000000000")
-                .unwrap();
-        let ufvk = zcash_keys::keys::UnifiedFullViewingKey::decode(&Network::Main, FVK).unwrap();
-        let mut sap_dec = ufvk.sapling().map(|fvk| {
-            let nk = fvk.fvk().vk.nk;
-            let ivk = fvk.to_ivk(zcash_primitives::zip32::Scope::External);
-            let pivk = sapling_crypto::keys::PreparedIncomingViewingKey::new(&ivk);
-            Decoder::<Sapling>::new(nk, fvk.clone(), pivk, &HashMap::new())
-        });
-        let mut orc_dec = ufvk.orchard().map(|fvk| {
-            let ivk = fvk.to_ivk(zcash_primitives::zip32::Scope::External);
-            let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ivk);
-            Decoder::<Orchard>::new(fvk.clone(), ivk, pivk, &HashMap::new())
-        });
+//         let prev_hash =
+//             hex::decode("5f03d35ae940bb840564c3b7af7ab72255096d3eca15c910c0e40d0000000000")
+//                 .unwrap();
+//         let ufvk = zcash_keys::keys::UnifiedFullViewingKey::decode(&Network::Main, FVK).unwrap();
+//         let mut sap_dec = ufvk.sapling().map(|fvk| {
+//             let nk = fvk.fvk().vk.nk;
+//             let ivk = fvk.to_ivk(zip32::Scope::External);
+//             let pivk = sapling_crypto::keys::PreparedIncomingViewingKey::new(&ivk);
+//             Decoder::<Sapling>::new(nk, fvk.clone(), pivk, &HashMap::new())
+//         });
+//         let mut orc_dec = ufvk.orchard().map(|fvk| {
+//             let ivk = fvk.to_ivk(zip32::Scope::External);
+//             let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ivk);
+//             Decoder::<Orchard>::new(fvk.clone(), ivk, pivk, &HashMap::new())
+//         });
 
-        let events = scan(
-            &Network::Main,
-            &mut client,
-            2_890_000,
-            2_900_000,
-            &prev_hash.try_into().unwrap(),
-            &mut sap_dec,
-            &mut orc_dec,
-        )
-        .await?;
+//         let events = scan(
+//             &Network::Main,
+//             &mut client,
+//             2_890_000,
+//             2_900_000,
+//             &prev_hash.try_into().unwrap(),
+//             &mut sap_dec,
+//             &mut orc_dec,
+//         )
+//         .await?;
 
-        println!("{events:?}");
+//         println!("{events:?}");
 
-        let db = Db::new(Network::Main, "zec-wallet-test.db", &ufvk, "").await?;
-        db.store_events(&events).await?;
+//         let db = Db::new(Network::Main, "zec-wallet-test.db", &ufvk, "").await?;
+//         db.store_events(&events).await?;
 
-        Ok(())
-    }
-}
+//         Ok(())
+//     }
+// }

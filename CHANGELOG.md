@@ -1,5 +1,7 @@
 # Changelog
 
+## TODO: Fix changelog history
+
 ## [1.1.3](https://github.com/hhanh00/zcash-walletd/compare/zcash-walletd-v1.1.2...zcash-walletd-v1.1.3) (2025-08-29)
 
 

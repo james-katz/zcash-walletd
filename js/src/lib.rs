@@ -130,7 +130,7 @@ fn get_transaction(txid: String, account_index: u32) -> Result<String, String> {
 #[node_bindgen]
 fn get_transfers(account_index: u32, subaddr_indices: Vec<u32>) -> Result<String, String> {
     run_blocking(|wallet| async move {
-        let rep = wallet.get_transfers(account_index, subaddr_indices).await.map_err(|e| e.to_string())?;
+        let rep = wallet.get_transfers(account_index, true, subaddr_indices).await.map_err(|e| e.to_string())?;
 
         let transfers: Vec<json::JsonValue> = rep
             .r#in

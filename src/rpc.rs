@@ -88,7 +88,7 @@ pub async fn get_transfers(
     let request = request.into_inner();
     assert!(request.r#in);
     
-    let rep = wallet.get_transfers(request.account_index, request.subaddr_indices).await?;
+    let rep = wallet.get_transfers(request.account_index, true, request.subaddr_indices).await?;
     Ok(Json(rep))
 }
 
