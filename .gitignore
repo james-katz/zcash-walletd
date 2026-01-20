@@ -12,3 +12,4 @@ docs/
 js/.env
 js/dist/
 js/node_modules/
+js/target/
